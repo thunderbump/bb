@@ -1,0 +1,38 @@
+{
+  "PolicyName": "BitbucketFileServerPolicy",
+  "PolicyDocument": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "ec2:AttachVolume",
+          "ec2:CopySnapshot",
+          "ec2:CreateSnapshot",
+          "ec2:CreateTags",
+          "ec2:CreateVolume",
+          "ec2:DeleteSnapshot",
+          "ec2:DescribeInstances",
+          "ec2:DescribeSnapshots",
+          "ec2:DescribeVolumes",
+          "ec2:DetachVolume",
+          "rds:AddTagsToResource",
+          "rds:CopyDBSnapshot",
+          "rds:CreateDBSnapshot",
+          "rds:DeleteDBSnapshot",
+          "rds:DescribeDBInstances",
+          "rds:DescribeDBSnapshots",
+          "rds:PromoteReadReplica",
+          "rds:ModifyDBInstance",
+          "rds:RestoreDBInstanceFromDBSnapshot",
+          "iam:PassRole",
+          "es:*"
+        ],
+        "Resource": [
+          "*"
+        ]
+      }
+    ]
+  }
+}
+
