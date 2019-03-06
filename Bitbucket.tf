@@ -132,33 +132,41 @@ data "aws_availability_zones" "available" {
 ##############################
 
 resource "aws_lb_target_group" "BitbucketAppServerClusterHttp" {
-  name   = "BitbucketAppServerClusterHttp"
-  vpc_id = "${data.aws_vpc.TargetVpc.id}"
+  name     = "BitbucketAppServerClusterHttp"
+  vpc_id   = "${data.aws_vpc.TargetVpc.id}"
+  port     = "80"
+  protocol = "TCP"
+
+  # work around, REF: https://github.com/terraform-providers/terraform-provider-aws/issues/2746
+  stickiness = []
 }
 
 ##########################
 # Load Balancer Listener #
 ##########################
 
+/*
 resource "aws_lb_listener" "InboundSsh" {
   load_balancer_arn = "${aws_lb.BitbucketLoadBalancer.arn}"
   port              = 22
   protocol          = "TCP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = "${aws_lb_target_group.BitbucketAppServerClusterHttp.id}"
+    type = "forward"
+
+    #target_group_arn = "${aws_lb_target_group.BitbucketAppServerClusterHttp.id}"
   }
 }
-
+*/
 resource "aws_lb_listener" "InboundHttp" {
   load_balancer_arn = "${aws_lb.BitbucketLoadBalancer.arn}"
   port              = 80
-  protocol          = "HTTP"
+  protocol          = "TCP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = "${aws_lb_target_group.BitbucketAppServerClusterHttp.id}"
+    type = "forward"
+
+    #target_group_arn = "${aws_lb_target_group.BitbucketAppServerClusterHttp.id}"
   }
 }
 
@@ -167,9 +175,12 @@ resource "aws_lb_listener" "InboundHttp" {
 #########################
 
 resource "aws_lb" "BitbucketLoadBalancer" {
-  name     = "BitbucketLoadBalancer"
-  internal = false
-  subnets  = ["${data.aws_subnet_ids.TargetVpcSubnetIds.ids[count.index]}"]
+  name               = "BitbucketLoadBalancer"
+  internal           = false
+  load_balancer_type = "network"
+  subnets            = ["${data.aws_subnet_ids.TargetVpcSubnetIds.ids[count.index]}"]
+
+  #subnet_id      = "${data.aws_subnet_ids.TargetVpcSubnetIds.ids[count.index]}"
 
   tags {
     Name       = "Bitbucket Database"
@@ -219,7 +230,7 @@ resource "aws_efs_file_system" "ClusterStorage" {
 # EFS Mount Points #
 ####################
 
-resource "aws_efs_mount_target" "Clusterstorage" {
+resource "aws_efs_mount_target" "ClusterStorage" {
   count = "${length(data.aws_subnet_ids.TargetVpcSubnetIds.ids)}"
 
   file_system_id = "${aws_efs_file_system.ClusterStorage.id}"
@@ -389,16 +400,17 @@ resource "aws_security_group" "BitbucketDBSecurityGroup" {
 ################
 
 resource "aws_db_instance" "BitbucketDBInstance" {
-  count                  = 2
-  allocated_storage      = 20
-  storage_type           = "gp2"
-  engine                 = "postgres"
-  instance_class         = "db.t3.micro"
-  name                   = "BitbucketDB"
-  username               = "${var.dbUser}"
-  password               = "${var.dbPassword}"
-  multi_az               = true
-  availability_zone      = "${data.aws_availability_zones.available.names[count.index]}"
+  count             = 0
+  allocated_storage = 20
+  storage_type      = "gp2"
+  engine            = "postgres"
+  instance_class    = "db.t3.micro"
+  name              = "BitbucketDB"
+  username          = "${var.dbUser}"
+  password          = "${var.dbPassword}"
+  multi_az          = false
+
+  #availability_zone      = "${data.aws_availability_zones.available.names[count.index]}"
   skip_final_snapshot    = true
   vpc_security_group_ids = ["${aws_security_group.BitbucketDBSecurityGroup.id}"]
 
