@@ -7,12 +7,10 @@
 #
 ##############################################
 
-
 provider "aws" {
   region  = "${var.AwsRegion}"
   profile = "${var.AwsProfile}"
 }
-
 
 ##############################################
 #  _   _                __     __
@@ -23,7 +21,6 @@ provider "aws" {
 #
 ##############################################
 
-
 variable "AwsProfile" {
   description = "AWS profile to use"
 }
@@ -31,7 +28,6 @@ variable "AwsProfile" {
 variable "AwsRegion" {
   description = "EC2 Region for the VPC"
 }
-
 
 ##############################################
 # __     __
@@ -42,15 +38,14 @@ variable "AwsRegion" {
 #
 ##############################################
 
-
 variable "ClusterNodeMin" {
   description = "Minimum number of cluster nodes allowed by autoscaling group"
-  default = 2
+  default     = 2
 }
 
 variable "ClusterNodeMax" {
   description = "Maximum number of cluster nodes allowed by autoscaling group"
-  default = 2
+  default     = 2
 }
 
 variable "SshKeyPair" {
@@ -73,7 +68,6 @@ variable "dbPassword" {
 # |____/ \__,_|\__\__,_|
 #
 ##############################################
-
 
 data "local_file" "ClusterNodeRoleAssumeRolePolicyDocument" {
   filename = "${path.module}/Policies/BitbucketClusterNodeRole/AssumeRolePolicyDocument.json"
@@ -99,19 +93,18 @@ data "aws_subnet_ids" "TargetVpcSubnetIds" {
   vpc_id = "${data.aws_vpc.TargetVpc.id}"
 }
 
-data "aws_ami" "BitbucketClusterNodeAmi" {
-  most_recent = true
+#data "aws_ami" "BitbucketClusterNodeAmi" {
+#  most_recent = true
 
-  filter {
-    name   = "tag:Release"
-    values = ["v.1.2.3.4"]
-  }
-}
+#  filter {
+#    name   = "tag:Release"
+#    values = ["v.1.2.3.4"]
+#  }
+#}
 
 data "aws_availability_zones" "available" {
   state = "available"
 }
-
 
 ##############################################
 #  ____
@@ -139,8 +132,8 @@ data "aws_availability_zones" "available" {
 ##############################
 
 resource "aws_lb_target_group" "BitbucketAppServerClusterHttp" {
-  name      = "BitbucketAppServerClusterHttp"
-  vpc_id    = "${data.aws_vpc.TargetVpc.id}"
+  name   = "BitbucketAppServerClusterHttp"
+  vpc_id = "${data.aws_vpc.TargetVpc.id}"
 }
 
 ##########################
@@ -148,22 +141,24 @@ resource "aws_lb_target_group" "BitbucketAppServerClusterHttp" {
 ##########################
 
 resource "aws_lb_listener" "InboundSsh" {
-  load_balancer_arn  = "${aws_lb.BitbucketLoadBalancer.arn}"
-  port               = 22
-  protocol           = "SSH"
+  load_balancer_arn = "${aws_lb.BitbucketLoadBalancer.arn}"
+  port              = 22
+  protocol          = "TCP"
+
   default_action {
     type             = "forward"
-    target_group_arn = "${aws_lb_target_group.BitbucketAppServerCluster}"
+    target_group_arn = "${aws_lb_target_group.BitbucketAppServerClusterHttp.id}"
   }
 }
 
 resource "aws_lb_listener" "InboundHttp" {
-  load_balancer_arn  = "${aws_lb.BitbucketLoadBalancer.arn}"
-  port               = 80
-  protocol           = "HTTP"
+  load_balancer_arn = "${aws_lb.BitbucketLoadBalancer.arn}"
+  port              = 80
+  protocol          = "HTTP"
+
   default_action {
     type             = "forward"
-    target_group_arn = "${aws_lb_target_group.BitbucketAppServerCluster}"
+    target_group_arn = "${aws_lb_target_group.BitbucketAppServerClusterHttp.id}"
   }
 }
 
@@ -172,14 +167,14 @@ resource "aws_lb_listener" "InboundHttp" {
 #########################
 
 resource "aws_lb" "BitbucketLoadBalancer" {
-  name       = "BitbucketLoadBalancer"
-  internal   = false
-  subnets    = ["${data.aws_subnet_ids.TargetVpcSubnetIds.ids[count.index]}"]
+  name     = "BitbucketLoadBalancer"
+  internal = false
+  subnets  = ["${data.aws_subnet_ids.TargetVpcSubnetIds.ids[count.index]}"]
 
   tags {
     Name       = "Bitbucket Database"
     Membership = "Bitbucket"
-  }  
+  }
 }
 
 #############################
@@ -195,8 +190,8 @@ resource "aws_lb" "BitbucketLoadBalancer" {
 ###################
 
 resource "aws_security_group" "NfsTrafficToClusterStorage" {
-  name              = "AllowNfsTrafficToClusterStorage"
-  description       = "Allow NFS traffic to Cluster Storage"
+  name        = "AllowNfsTrafficToClusterStorage"
+  description = "Allow NFS traffic to Cluster Storage"
 
   ingress {
     to_port         = 2049
@@ -213,10 +208,10 @@ resource "aws_security_group" "NfsTrafficToClusterStorage" {
 resource "aws_efs_file_system" "ClusterStorage" {
   creation_token = "BitbucketClusterStorage"
   encrypted      = true
-  
+
   tags = {
-    Name         = "Bitbucket Cluster Storage"
-    Project      = "bb"
+    Name    = "Bitbucket Cluster Storage"
+    Project = "bb"
   }
 }
 
@@ -225,11 +220,10 @@ resource "aws_efs_file_system" "ClusterStorage" {
 ####################
 
 resource "aws_efs_mount_target" "Clusterstorage" {
-  count          = "${length(data.aws_subnet_ids.TargetVpcSubnetIds.ids)}"
+  count = "${length(data.aws_subnet_ids.TargetVpcSubnetIds.ids)}"
 
   file_system_id = "${aws_efs_file_system.ClusterStorage.id}"
   subnet_id      = "${data.aws_subnet_ids.TargetVpcSubnetIds.ids[count.index]}"
-   
 }
 
 #############################
@@ -245,7 +239,7 @@ resource "aws_efs_mount_target" "Clusterstorage" {
 ################
 
 resource "aws_iam_policy" "ClusterNodeRoleClusterNodePolicy" {
-  name = "ClusterNodeRoleClusterNodePolicy"
+  name        = "ClusterNodeRoleClusterNodePolicy"
   description = "Policy to allow nodes to discover and join HAProxy cluster"
   policy      = "${data.local_file.ClusterNodeRoleClusterNodePolicy.content}"
 }
@@ -268,13 +262,12 @@ resource "aws_iam_role_policy_attachment" "ClusterNodeRoleClusterNodePolicyAttac
   policy_arn = "${aws_iam_policy.ClusterNodeRoleClusterNodePolicy.arn}"
 }
 
-
 ###################
 # Security Groups #
 ###################
 
 resource "aws_security_group" "AllowSsh" {
-  name = "AllowSsh"
+  name        = "AllowSsh"
   description = "Allow SSH from corp"
 
   ingress {
@@ -286,8 +279,8 @@ resource "aws_security_group" "AllowSsh" {
 }
 
 resource "aws_security_group" "WebTrafficToAppServers" {
-  name          = "WebTrafficToAppServers"
-  description   = "Web traffic to App servers"
+  name        = "WebTrafficToAppServers"
+  description = "Web traffic to App servers"
 
   ingress {
     to_port     = 80
@@ -310,29 +303,40 @@ resource "aws_iam_instance_profile" "BitbucketAppServerMember" {
 # Launch Configurations #
 #########################
 
+/*
 resource "aws_launch_configuration" "BitbucketAppServerMember" {
-  name_prefix          = "BitbucketAppServerMember"
-  image_id             = "${data.aws_ami.BitbucketClusterNodeAmi.id}"
-  instance_type        = "t2.micro"
-  key_name             = "${var.SshKeyPair}"
-  security_groups      = ["${aws_security_group.AllowSsh.id}",
-                          "${aws_security_group.WebTrafficToAppServers.id}"]
+  name_prefix = "BitbucketAppServerMember"
+
+  #image_id      = "${data.aws_ami.BitbucketClusterNodeAmi.id}"
+  instance_type = "t2.micro"
+  key_name      = "${var.SshKeyPair}"
+  image_id      = "ami-095cd038eef3e5074"
+  owner         = "709874730918"
+
+  security_groups = ["${aws_security_group.AllowSsh.id}",
+    "${aws_security_group.WebTrafficToAppServers.id}",
+  ]
+
   iam_instance_profile = "${aws_iam_instance_profile.BitbucketAppServerMember.name}"
 }
+*/
 
 ####################
 # Placement Groups #
 ####################
 
+/*
 resource "aws_placement_group" "BitbucketAppServerMembers" {
   name     = "BitbucketAppServerMembers"
   strategy = "spread"
 }
+*/
 
 ######################
 # Autoscaling Groups #
 ######################
 
+/*
 resource "aws_autoscaling_group" "BitbucketAppServerMembers" {
   name                      = "BitbucketAppServerMembers"
   max_size                  = "${var.ClusterNodeMax}"
@@ -344,17 +348,18 @@ resource "aws_autoscaling_group" "BitbucketAppServerMembers" {
   vpc_zone_identifier       = ["${data.aws_subnet_ids.TargetVpcSubnetIds.ids}"]
 
   tag {
-    key                     = "membership"
-    value                   = "Bitbucket"
-    propagate_at_launch     = true
+    key                 = "membership"
+    value               = "Bitbucket"
+    propagate_at_launch = true
   }
 
   tag {
-    key                     = "Name"
-    value                   = "Bitbucket App Server Node"
-    propagate_at_launch     = true
+    key                 = "Name"
+    value               = "Bitbucket App Server Node"
+    propagate_at_launch = true
   }
 }
+*/
 
 #############################
 #  ___       _        _                  
@@ -372,10 +377,10 @@ resource "aws_security_group" "BitbucketDBSecurityGroup" {
   name = "BitbucketDBSecurityGroup"
 
   ingress {
-    from_port         = 5432
-    to_port           = 5432
-    protocol          = "tcp"
-    security_groups   = ["${aws_security_group.WebTrafficToAppServers.id}"]
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = ["${aws_security_group.WebTrafficToAppServers.id}"]
   }
 }
 

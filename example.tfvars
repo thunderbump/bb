@@ -1,0 +1,5 @@
+AwsRegion = ""
+AwsProfile = ""
+dbUser = ""
+dbPassword = ""
+SshKeyPair = ""
